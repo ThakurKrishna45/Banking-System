@@ -31,3 +31,21 @@ build/
 
 ### VS Code ###
 .vscode/
+# --- SPRING BOOT ADDITIONS ---
+# Ignore local env overrides (Good for DB passwords)
+**/src/main/resources/application-*.properties
+!**/src/main/resources/application-dev.properties
+
+# Log files
+*.log
+
+# Project/Build tools
+.mtj.tmp/
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Crash logs
+hs_err_pid*

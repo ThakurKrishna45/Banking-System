@@ -1,10 +1,13 @@
 package com.krishna.banking.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
+@Data
 public class Transaction {
 
     @Id
@@ -17,7 +20,7 @@ public class Transaction {
     @Enumerated(EnumType.STRING)
     private TransactionDirection direction;
 
-    private double amount;
+    private BigDecimal amount;
 
     private LocalDateTime date;
 

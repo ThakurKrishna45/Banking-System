@@ -13,8 +13,10 @@ public class Account {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
     @Enumerated(EnumType.STRING)
-    private AccountType type;
-    private BigDecimal balance;
+    private AccountType accountType;
+    private BigDecimal balance= BigDecimal.valueOf(0);
+    private boolean isActive=true;
+
     @ManyToOne(fetch = FetchType.LAZY)
     private Customer customer;
     @OneToMany(mappedBy = "account", cascade = CascadeType.ALL)

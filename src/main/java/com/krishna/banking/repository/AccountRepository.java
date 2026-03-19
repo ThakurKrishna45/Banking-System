@@ -1,7 +1,9 @@
 package com.krishna.banking.repository;
 
 import com.krishna.banking.entity.Account;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -9,6 +11,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface AccountRepository extends JpaRepository<Account,Integer> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT a FROM Account a WHERE a.id = :id")
+    Optional<Account> findByIdWithLock(@Param("id")Integer id);
 
     @Query("SELECT a FROM Account a LEFT JOIN FETCH a.customer WHERE a.id=:id")
     Optional<Account> findByIdAccount(@Param("id") Integer id);

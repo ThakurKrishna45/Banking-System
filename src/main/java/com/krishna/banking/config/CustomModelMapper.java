@@ -2,10 +2,14 @@ package com.krishna.banking.config;
 
 import com.krishna.banking.entity.Account;
 import com.krishna.banking.entity.Customer;
+import com.krishna.banking.entity.Transaction;
 import com.krishna.banking.entity.dto.ResponseAccountDto;
 import com.krishna.banking.entity.dto.ResponseCustomerDto;
+import com.krishna.banking.entity.dto.ResponseTransactionDto;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 @Component
@@ -26,5 +30,17 @@ public class CustomModelMapper {
         responseAccountDto.setCustomerId(account.getCustomer().getId());
         responseAccountDto.setActive(account.isActive());
         return responseAccountDto;
+    }
+    public ResponseTransactionDto mapTransactionResponse(Transaction transaction,ResponseTransactionDto responseDto){
+        responseDto.setReferenceId(transaction.getReferenceId());
+        responseDto.setType(String.valueOf(transaction.getType()));
+        responseDto.setDirection(String.valueOf(transaction.getDirection()));
+        responseDto.setAmount(transaction.getAmount());
+        responseDto.setDate(transaction.getDate());
+        responseDto.setAccountNumber(transaction.getAccount().getId());
+        if (transaction.getRelatedAccount() != null) {
+            responseDto.setRelatedAccountNumber(transaction.getRelatedAccount().getId());
+        }
+        return responseDto;
     }
 }

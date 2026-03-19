@@ -4,7 +4,7 @@ import com.krishna.banking.entity.Account;
 
 import java.math.BigDecimal;
 
-public class LoadDto {
+public class LoanDto {
     private String loadId;
     private BigDecimal amount;
     private Account account;

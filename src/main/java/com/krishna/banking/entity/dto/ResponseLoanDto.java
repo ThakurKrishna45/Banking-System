@@ -1,19 +1,16 @@
-package com.krishna.banking.entity;
+package com.krishna.banking.entity.dto;
 
-import jakarta.persistence.Entity;
+import com.krishna.banking.entity.Account;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.math.BigDecimal;
-
-@Entity
 @Data
-public class Loan {
-    @Id
+public class ResponseLoanDto {
     private String loanId;
     private BigDecimal amount;
     private String status;
-    @ManyToOne
-    private Account account;
+    private Integer accountId;
 }

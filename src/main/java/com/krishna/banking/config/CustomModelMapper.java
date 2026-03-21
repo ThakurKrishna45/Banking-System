@@ -2,9 +2,11 @@ package com.krishna.banking.config;
 
 import com.krishna.banking.entity.Account;
 import com.krishna.banking.entity.Customer;
+import com.krishna.banking.entity.Loan;
 import com.krishna.banking.entity.Transaction;
 import com.krishna.banking.entity.dto.ResponseAccountDto;
 import com.krishna.banking.entity.dto.ResponseCustomerDto;
+import com.krishna.banking.entity.dto.ResponseLoanDto;
 import com.krishna.banking.entity.dto.ResponseTransactionDto;
 import org.springframework.stereotype.Component;
 
@@ -42,5 +44,17 @@ public class CustomModelMapper {
             responseDto.setRelatedAccountNumber(transaction.getRelatedAccount().getId());
         }
         return responseDto;
+    }
+    public ResponseLoanDto toResponseDto(Loan loan) {
+
+        ResponseLoanDto dto = new ResponseLoanDto();
+        dto.setLoanId(loan.getLoanId());
+        dto.setAmount(loan.getAmount());
+        dto.setStatus(loan.getStatus());
+
+
+            dto.setAccountId(loan.getAccount().getId());
+
+        return dto;
     }
 }

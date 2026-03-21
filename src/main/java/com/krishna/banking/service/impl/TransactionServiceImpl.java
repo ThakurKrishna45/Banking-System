@@ -107,7 +107,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Account does not exist with account number " + secondId));
 
-        // identify sender & receiver
+        // identify sender and receiver
         Account sender = senderAccountNumber.equals(firstId) ? first : second;
         Account receiver = receiverAccountNumber.equals(secondId) ? second : first;
 

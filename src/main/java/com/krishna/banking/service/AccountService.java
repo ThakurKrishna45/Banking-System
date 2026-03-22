@@ -13,4 +13,6 @@ public interface AccountService {
     List<ResponseAccountDto> getAccountByCustomer(Integer id);
 
     void deactivateAccount(Integer id);
+
+    void ActivateAccount(Integer id);
 }

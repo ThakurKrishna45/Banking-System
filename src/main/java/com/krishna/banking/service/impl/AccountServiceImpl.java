@@ -65,4 +65,12 @@ public class AccountServiceImpl implements AccountService {
         account.setActive(false);
         accountRepository.save(account);
     }
+
+    @Override
+    public void ActivateAccount(Integer id) {
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Account does not exist with id" + id));
+        account.setActive(true);
+        accountRepository.save(account);
+    }
 }

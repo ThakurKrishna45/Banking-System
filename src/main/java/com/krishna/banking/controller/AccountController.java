@@ -41,4 +41,9 @@ public class AccountController {
         accountService.deactivateAccount(id);
         return ResponseEntity.ok("Account Deactivated Successfully");
     }
+    @PatchMapping("activateAccount/{id}")
+    public ResponseEntity<String> activateAccount(@PathVariable Integer id){
+        accountService.ActivateAccount(id);
+        return ResponseEntity.ok("Account Activated Successfully");
+    }
 }

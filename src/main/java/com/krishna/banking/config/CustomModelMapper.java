@@ -40,6 +40,7 @@ public class CustomModelMapper {
         responseDto.setAmount(transaction.getAmount());
         responseDto.setDate(transaction.getDate());
         responseDto.setAccountNumber(transaction.getAccount().getId());
+        responseDto.setStatus(transaction.getStatus());
         if (transaction.getRelatedAccount() != null) {
             responseDto.setRelatedAccountNumber(transaction.getRelatedAccount().getId());
         }

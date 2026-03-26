@@ -1,10 +1,7 @@
 package com.krishna.banking.service.impl;
 
 import com.krishna.banking.config.CustomModelMapper;
-import com.krishna.banking.entity.Account;
-import com.krishna.banking.entity.Transaction;
-import com.krishna.banking.entity.TransactionDirection;
-import com.krishna.banking.entity.TransactionType;
+import com.krishna.banking.entity.*;
 import com.krishna.banking.entity.dto.MiniStatementDto;
 import com.krishna.banking.entity.dto.ResponseTransactionDto;
 import com.krishna.banking.entity.dto.TransactionDto;
@@ -12,6 +9,7 @@ import com.krishna.banking.exception.InvalidOperationException;
 import com.krishna.banking.exception.ResourceNotFoundException;
 import com.krishna.banking.repository.AccountRepository;
 import com.krishna.banking.repository.TransactionRepository;
+import com.krishna.banking.service.TransactionLoggerService;
 import com.krishna.banking.service.TransactionService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -34,114 +32,115 @@ public class TransactionServiceImpl implements TransactionService {
     final private AccountRepository accountRepository;
     final private CustomModelMapper customModelMapper;
     final private ModelMapper modelMapper;
-    @Override
-    @Transactional
-    public ResponseTransactionDto deposit(TransactionDto transactionDto) {
-        Integer accountNumber=transactionDto.getAccountNumber();
-        Account account = accountRepository.findByIdWithLock(accountNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("Account does not exist with account number" + accountNumber));
-        account.setBalance(account.getBalance().add(transactionDto.getAmount()));
-
-
-        String refId = UUID.randomUUID().toString();
-        Transaction credit = new Transaction();
-        credit.setReferenceId(refId);
-        credit.setAccount(account);
-        credit.setDirection(TransactionDirection.CREDIT);
-        credit.setType(TransactionType.DEPOSIT);
-        credit.setAmount(transactionDto.getAmount());
-        credit.setDate(LocalDateTime.now());
-
-        transactionRepository.save(credit);
-
-        return customModelMapper.mapTransactionResponse(credit,new ResponseTransactionDto());
-    }
-
-    @Override
-    @Transactional
-    public ResponseTransactionDto withdraw(TransactionDto transactionDto) {
-        Integer accountNumber=transactionDto.getAccountNumber();
-        BigDecimal amount=transactionDto.getAmount();
-
-        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new InvalidOperationException("Amount must be greater than zero");
+    final private TransactionLoggerService transactionLoggerService;
+        private Transaction buildTxn(String refId, Account account, Account relatedAccount,
+                                     BigDecimal amt, TransactionType type,
+                                     TransactionDirection dir, Status status) {
+            return Transaction.builder()
+                    .referenceId(refId)
+                    .account(account)
+                    .relatedAccount(relatedAccount)
+                    .amount(amt)
+                    .type(type)
+                    .direction(dir)
+                    .date(LocalDateTime.now())
+                    .status(status)
+                    .build();
         }
-        Account account = accountRepository.findByIdWithLock(accountNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("Account does not exist with account number" + accountNumber));
 
-        if(account.getBalance().compareTo(amount)<0) throw new InvalidOperationException("Insufficient balance");
-        account.setBalance(account.getBalance().subtract(amount));
+        @Override
+        @Transactional
+        public ResponseTransactionDto deposit(TransactionDto dto) {
+            String refId = UUID.randomUUID().toString();
+            Account account = null;
+            try {
+                account = accountRepository.findByIdWithLock(dto.getAccountNumber())
+                        .orElseThrow(() -> new ResourceNotFoundException("Account not found with account number "+dto.getAccountNumber()));
 
+                account.setBalance(account.getBalance().add(dto.getAmount()));
 
-        String refId = UUID.randomUUID().toString();
-        Transaction debit = new Transaction();
-        debit.setReferenceId(refId);
-        debit.setAccount(account);
-        debit.setDirection(TransactionDirection.DEBIT);
-        debit.setType(TransactionType.WITHDRAW);
-        debit.setAmount(amount);
-        debit.setDate(LocalDateTime.now());
+                Transaction success = buildTxn(refId, account, null, dto.getAmount(),
+                        TransactionType.DEPOSIT, TransactionDirection.CREDIT, Status.SUCCESS);
+                transactionRepository.save(success);
+                return customModelMapper.mapTransactionResponse(success, new ResponseTransactionDto());
 
-        transactionRepository.save(debit);
-
-        return customModelMapper.mapTransactionResponse(debit,new ResponseTransactionDto());
-    }
-
-    @Override
-    @Transactional
-    public ResponseTransactionDto transfer(TransactionDto transactionDto) {
-        Integer senderAccountNumber=transactionDto.getAccountNumber();
-        Integer receiverAccountNumber=transactionDto.getRelatedAccountNumber();
-        BigDecimal amount=transactionDto.getAmount();
-        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new InvalidOperationException("Amount must be greater than zero");
+            } catch (Exception e) {
+                transactionLoggerService.logStatus(buildTxn(refId, account, null, dto.getAmount(),
+                        TransactionType.DEPOSIT, TransactionDirection.CREDIT, Status.FAILED));
+                throw e;
+            }
         }
-        Integer firstId = Math.min(senderAccountNumber, receiverAccountNumber);
-        Integer secondId = Math.max(senderAccountNumber, receiverAccountNumber);
 
-        Account first = accountRepository.findByIdWithLock(firstId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Account does not exist with account number " + firstId));
+        @Override
+        @Transactional
+        public ResponseTransactionDto withdraw(TransactionDto dto) {
+            String refId = UUID.randomUUID().toString();
+            Account account = null;
+            try {
+                if (dto.getAmount().compareTo(BigDecimal.ZERO) <= 0) throw new InvalidOperationException("Invalid amount");
 
-        Account second = accountRepository.findByIdWithLock(secondId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Account does not exist with account number " + secondId));
+                account = accountRepository.findByIdWithLock(dto.getAccountNumber())
+                        .orElseThrow(() -> new ResourceNotFoundException("Account not found with account number "+dto.getAccountNumber()));
 
-        // identify sender and receiver
-        Account sender = senderAccountNumber.equals(firstId) ? first : second;
-        Account receiver = receiverAccountNumber.equals(secondId) ? second : first;
+                if(account.getBalance().compareTo(dto.getAmount()) < 0) throw new InvalidOperationException("Insufficient balance");
 
-        if(sender.getBalance().compareTo(amount)<0) throw new InvalidOperationException("Insufficient balance");
+                account.setBalance(account.getBalance().subtract(dto.getAmount()));
 
+                Transaction success = buildTxn(refId, account, null, dto.getAmount(),
+                        TransactionType.WITHDRAW, TransactionDirection.DEBIT, Status.SUCCESS);
+                transactionRepository.save(success);
+                return customModelMapper.mapTransactionResponse(success, new ResponseTransactionDto());
 
-        String refId = UUID.randomUUID().toString();
+            } catch (Exception e) {
+                transactionLoggerService.logStatus(buildTxn(refId, account, null, dto.getAmount(),
+                        TransactionType.WITHDRAW, TransactionDirection.DEBIT, Status.FAILED));
+                throw e;
+            }
+        }
 
-        // for sender
-        sender.setBalance(sender.getBalance().subtract(amount));
-        Transaction debit = new Transaction();
-        debit.setReferenceId(refId);
-        debit.setAccount(sender);
-        debit.setDirection(TransactionDirection.DEBIT);
-        debit.setType(TransactionType.TRANSFER);
-        debit.setAmount(amount);
-        debit.setDate(LocalDateTime.now());
-        debit.setRelatedAccount(receiver);
-        transactionRepository.save(debit);
+        @Override
+        @Transactional
+        public ResponseTransactionDto transfer(TransactionDto dto) {
+            String refId = UUID.randomUUID().toString();
+            Account sender = null;
+            try {
+                if (dto.getAmount().compareTo(BigDecimal.ZERO) <= 0) throw new InvalidOperationException("Invalid amount");
 
-        //  for receiver
-        receiver.setBalance(receiver.getBalance().add(transactionDto.getAmount()));
-        Transaction credit = new Transaction();
-        credit.setReferenceId(refId);
-        credit.setAccount(receiver);
-        credit.setDirection(TransactionDirection.CREDIT);
-        credit.setType(TransactionType.DEPOSIT);
-        credit.setAmount(transactionDto.getAmount());
-        credit.setDate(LocalDateTime.now());
-        credit.setRelatedAccount(sender);
-        transactionRepository.save(credit);
-        return customModelMapper.mapTransactionResponse(debit,new ResponseTransactionDto());
-    }
+                // Pessimistic Locking in order to prevent deadlocks
+                Integer firstId = Math.min(dto.getAccountNumber(), dto.getRelatedAccountNumber());
+                Integer secondId = Math.max(dto.getAccountNumber(), dto.getRelatedAccountNumber());
 
+                Account first = accountRepository.findByIdWithLock(firstId).orElseThrow(() -> new ResourceNotFoundException("Account not found with account number "+firstId));
+                Account second = accountRepository.findByIdWithLock(secondId).orElseThrow(() -> new ResourceNotFoundException("Account not with account number "+secondId));
+
+                sender = dto.getAccountNumber().equals(firstId) ? first : second;
+                Account receiver = dto.getRelatedAccountNumber().equals(secondId) ? second : first;
+
+                if(sender.getBalance().compareTo(dto.getAmount()) < 0) throw new InvalidOperationException("Insufficient balance");
+
+                // Perform Money Movement
+                sender.setBalance(sender.getBalance().subtract(dto.getAmount()));
+                receiver.setBalance(receiver.getBalance().add(dto.getAmount()));
+
+                // Save Debit Record for Sender
+                Transaction debit = buildTxn(refId, sender, receiver, dto.getAmount(),
+                        TransactionType.TRANSFER, TransactionDirection.DEBIT, Status.SUCCESS);
+                transactionRepository.save(debit);
+
+                // Save Credit Record for Receiver
+                Transaction credit = buildTxn(refId, receiver, sender, dto.getAmount(),
+                        TransactionType.TRANSFER, TransactionDirection.CREDIT, Status.SUCCESS);
+                transactionRepository.save(credit);
+
+                return customModelMapper.mapTransactionResponse(debit, new ResponseTransactionDto());
+
+            } catch (Exception e) {
+
+                transactionLoggerService.logStatus(buildTxn(refId, sender, null, dto.getAmount(),
+                        TransactionType.TRANSFER, TransactionDirection.DEBIT, Status.FAILED));
+                throw e;
+            }
+        }
     @Override
     public List<MiniStatementDto> miniStatement(Integer id) {
         accountRepository.findById(id)

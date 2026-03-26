@@ -1,5 +1,6 @@
 package com.krishna.banking.entity.dto;
 
+import com.krishna.banking.entity.Status;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -16,4 +17,5 @@ public class ResponseTransactionDto {
 
     private Integer accountNumber;
     private Integer relatedAccountNumber;
+    private Status status;
 }

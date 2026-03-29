@@ -13,6 +13,9 @@ import com.krishna.banking.service.AccountService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -44,6 +47,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @Cacheable(value = "Account", key = "#id")
     public ResponseAccountDto getAccountById(Integer id) {
         Account account = accountRepository.findByIdAccount(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Account does not exist with id" + id));
@@ -51,6 +55,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @Cacheable(value = "UserAccount",key = "#id")
     public List<ResponseAccountDto> getAccountByCustomer(Integer id) {
         List<Account> accountList = accountRepository.findByCustomerId(id);
         if(accountList.isEmpty())throw new ResourceNotFoundException("No account exist with customerId "+id);
@@ -59,6 +64,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @CacheEvict(value = "Account",key="#id")
     public void deactivateAccount(Integer id) {
         Account account = accountRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Account does not exist with id" + id));
@@ -67,6 +73,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @CacheEvict(value = "Account",key="#id")
     public void ActivateAccount(Integer id) {
         Account account = accountRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Account does not exist with id" + id));

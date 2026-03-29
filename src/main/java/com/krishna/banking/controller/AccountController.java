@@ -26,14 +26,14 @@ public class AccountController {
     @GetMapping("/getAccountById/{id}")
     public ResponseEntity<ResponseDto> getAccountById(@PathVariable Integer id){
         ResponseAccountDto responseAccountDto=accountService.getAccountById(id);
-        return ResponseEntity.status(HttpStatus.FOUND)
+        return ResponseEntity.status(HttpStatus.OK)
                 .body(new ResponseDto(AccountConstant.STATUS_200,AccountConstant.Message_get,responseAccountDto));
     }
 
     @GetMapping("/getAccountByCusotmer")
     public ResponseEntity<ResponseDto> getAccountByCustomer(@RequestParam Integer id){
         List<ResponseAccountDto> responseAccountDto=accountService.getAccountByCustomer(id);
-        return ResponseEntity.status(HttpStatus.FOUND)
+        return ResponseEntity.status(HttpStatus.OK)
                 .body(new ResponseDto(AccountConstant.STATUS_200,AccountConstant.Message_get,responseAccountDto));
     }
     @PatchMapping("deactivateAccount/{id}")

@@ -15,6 +15,8 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
@@ -50,6 +52,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         @Override
         @Transactional
+        @CacheEvict(value = "Account", key = "#dto.getAccountNumber()")
         public ResponseTransactionDto deposit(TransactionDto dto) {
             String refId = UUID.randomUUID().toString();
             Account account = null;
@@ -73,6 +76,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         @Override
         @Transactional
+        @CacheEvict(value = "Account", key = "#dto.getAccountNumber()")
         public ResponseTransactionDto withdraw(TransactionDto dto) {
             String refId = UUID.randomUUID().toString();
             Account account = null;
@@ -100,6 +104,10 @@ public class TransactionServiceImpl implements TransactionService {
 
         @Override
         @Transactional
+        @Caching(evict = {
+                @CacheEvict(value = "Account", key = "#dto.getAccountNumber()"),
+                @CacheEvict(value = "Account", key = "#dto.getRelatedAccountNumber()")
+        })
         public ResponseTransactionDto transfer(TransactionDto dto) {
             String refId = UUID.randomUUID().toString();
             Account sender = null;
@@ -141,8 +149,8 @@ public class TransactionServiceImpl implements TransactionService {
                 throw e;
             }
         }
-    @Override
-    public List<MiniStatementDto> miniStatement(Integer id) {
+        @Override
+        public List<MiniStatementDto> miniStatement(Integer id) {
         accountRepository.findById(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Account not found " + id));

@@ -2,12 +2,18 @@ spring:
   application:
     name: banking-system
   datasource:
-    url: jdbc:postgresql://localhost:5432/BankingSystem
+#    url: jdbc:postgresql://localhost:5432/BankingSystem
+#    username: postgres
+#    password: 1
+    url: jdbc:postgresql://localhost:5433/mydb
     username: postgres
-    password: 1
+    password: postgres
     driver-class-name: org.postgresql.Driver
+  data:
+    redis:
+      host: localhost
+      port: 6379
 
-  # MOVE THIS INSIDE 'spring'
   jpa:
     hibernate:
       ddl-auto: update
@@ -15,5 +21,5 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-    # Optional: Disable the annoying 'open-in-view' warning from your logs
+        hibernate.jdbc.time_zone: Asia/Kolkata
     open-in-view: false

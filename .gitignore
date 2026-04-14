@@ -46,6 +46,6 @@ build/
 *.zip
 *.tar.gz
 *.rar
-
+*.env
 # Crash logs
 hs_err_pid*

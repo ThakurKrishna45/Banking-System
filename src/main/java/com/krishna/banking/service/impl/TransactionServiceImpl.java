@@ -5,8 +5,10 @@ import com.krishna.banking.entity.*;
 import com.krishna.banking.entity.dto.MiniStatementDto;
 import com.krishna.banking.entity.dto.ResponseTransactionDto;
 import com.krishna.banking.entity.dto.TransactionDto;
+import com.krishna.banking.event.TransactionNotificationEvent;
 import com.krishna.banking.exception.InvalidOperationException;
 import com.krishna.banking.exception.ResourceNotFoundException;
+import com.krishna.banking.kafka.ProducerService;
 import com.krishna.banking.repository.AccountRepository;
 import com.krishna.banking.repository.TransactionRepository;
 import com.krishna.banking.service.TransactionLoggerService;
@@ -21,6 +23,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -35,9 +39,10 @@ public class TransactionServiceImpl implements TransactionService {
     final private CustomModelMapper customModelMapper;
     final private ModelMapper modelMapper;
     final private TransactionLoggerService transactionLoggerService;
-        private Transaction buildTxn(String refId, Account account, Account relatedAccount,
-                                     BigDecimal amt, TransactionType type,
-                                     TransactionDirection dir, Status status) {
+    final private ProducerService producerService;
+    private Transaction buildTxn(String refId, Account account, Account relatedAccount,
+                                 BigDecimal amt, TransactionType type,
+                                 TransactionDirection dir, Status status) {
             return Transaction.builder()
                     .referenceId(refId)
                     .account(account)
@@ -62,14 +67,34 @@ public class TransactionServiceImpl implements TransactionService {
 
                 account.setBalance(account.getBalance().add(dto.getAmount()));
 
+//                save success transaction
                 Transaction success = buildTxn(refId, account, null, dto.getAmount(),
                         TransactionType.DEPOSIT, TransactionDirection.CREDIT, Status.SUCCESS);
                 transactionRepository.save(success);
+
+//                trigger success notification event
+                TransactionNotificationEvent event = customModelMapper.mapToTransactionEvent(success,
+                        account.getCustomer().getEmail());
+                TransactionSynchronizationManager.registerSynchronization(
+                        new TransactionSynchronization() {
+                            @Override
+                            public void afterCommit() {
+                                producerService.send(event);
+                            }
+                        }
+                );
                 return customModelMapper.mapTransactionResponse(success, new ResponseTransactionDto());
 
             } catch (Exception e) {
-                transactionLoggerService.logStatus(buildTxn(refId, account, null, dto.getAmount(),
-                        TransactionType.DEPOSIT, TransactionDirection.CREDIT, Status.FAILED));
+//                save failed transaction
+                Transaction fail = buildTxn(refId, account, null, dto.getAmount(),
+                        TransactionType.DEPOSIT, TransactionDirection.CREDIT, Status.FAILED);
+                transactionLoggerService.logStatus(fail);
+
+//                trigger fail notification event
+                TransactionNotificationEvent event = customModelMapper.mapToTransactionEvent(fail,
+                        account.getCustomer().getEmail());
+                producerService.send(event);
                 throw e;
             }
         }
@@ -90,14 +115,34 @@ public class TransactionServiceImpl implements TransactionService {
 
                 account.setBalance(account.getBalance().subtract(dto.getAmount()));
 
+//          Save Success Transaction
                 Transaction success = buildTxn(refId, account, null, dto.getAmount(),
                         TransactionType.WITHDRAW, TransactionDirection.DEBIT, Status.SUCCESS);
                 transactionRepository.save(success);
+
+//                trigger success notification event
+                TransactionNotificationEvent event = customModelMapper.mapToTransactionEvent(success,
+                        account.getCustomer().getEmail());
+                TransactionSynchronizationManager.registerSynchronization(
+                        new TransactionSynchronization() {
+                            @Override
+                            public void afterCommit() {
+                                producerService.send(event);
+                            }
+                        }
+                );
                 return customModelMapper.mapTransactionResponse(success, new ResponseTransactionDto());
 
             } catch (Exception e) {
-                transactionLoggerService.logStatus(buildTxn(refId, account, null, dto.getAmount(),
-                        TransactionType.WITHDRAW, TransactionDirection.DEBIT, Status.FAILED));
+//                save failed transaction
+                Transaction fail = buildTxn(refId, account, null, dto.getAmount(),
+                        TransactionType.WITHDRAW, TransactionDirection.DEBIT, Status.FAILED);
+                transactionLoggerService.logStatus(fail);
+
+//                trigger fail notification event
+                TransactionNotificationEvent event = customModelMapper.mapToTransactionEvent(fail,
+                        account.getCustomer().getEmail());
+                producerService.send(event);
                 throw e;
             }
         }
@@ -135,17 +180,43 @@ public class TransactionServiceImpl implements TransactionService {
                         TransactionType.TRANSFER, TransactionDirection.DEBIT, Status.SUCCESS);
                 transactionRepository.save(debit);
 
+//                trigger success notification event for sender
+                TransactionNotificationEvent event = customModelMapper.mapToTransactionEvent(debit,
+                        sender.getCustomer().getEmail());
+                TransactionSynchronizationManager.registerSynchronization(
+                        new TransactionSynchronization() {
+                            @Override
+                            public void afterCommit() {
+                                producerService.send(event);
+                            }
+                        }
+                );
                 // Save Credit Record for Receiver
                 Transaction credit = buildTxn(refId, receiver, sender, dto.getAmount(),
                         TransactionType.TRANSFER, TransactionDirection.CREDIT, Status.SUCCESS);
                 transactionRepository.save(credit);
 
+//                trigger success notification event for receiver
+                TransactionNotificationEvent event2 = customModelMapper.mapToTransactionEvent(credit,
+                        receiver.getCustomer().getEmail());
+                TransactionSynchronizationManager.registerSynchronization(
+                        new TransactionSynchronization() {
+                            @Override
+                            public void afterCommit() {
+                                producerService.send(event2);
+                            }
+                        }
+                );
                 return customModelMapper.mapTransactionResponse(debit, new ResponseTransactionDto());
 
             } catch (Exception e) {
+                Transaction fail = buildTxn(refId, sender, null, dto.getAmount(),
+                        TransactionType.TRANSFER, TransactionDirection.DEBIT, Status.FAILED);
+                transactionLoggerService.logStatus(fail);
 
-                transactionLoggerService.logStatus(buildTxn(refId, sender, null, dto.getAmount(),
-                        TransactionType.TRANSFER, TransactionDirection.DEBIT, Status.FAILED));
+//                trigger fail notification event
+                TransactionNotificationEvent event = customModelMapper.mapToTransactionEvent(fail,
+                        sender.getCustomer().getEmail());
                 throw e;
             }
         }

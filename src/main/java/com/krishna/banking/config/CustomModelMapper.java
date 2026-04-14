@@ -8,10 +8,9 @@ import com.krishna.banking.entity.dto.ResponseAccountDto;
 import com.krishna.banking.entity.dto.ResponseCustomerDto;
 import com.krishna.banking.entity.dto.ResponseLoanDto;
 import com.krishna.banking.entity.dto.ResponseTransactionDto;
+import com.krishna.banking.event.TransactionNotificationEvent;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 @Component
@@ -57,5 +56,23 @@ public class CustomModelMapper {
             dto.setAccountId(loan.getAccount().getId());
 
         return dto;
+    }
+    public TransactionNotificationEvent mapToTransactionEvent(Transaction transaction, String email) {
+
+        return TransactionNotificationEvent.builder()
+                .referenceId(transaction.getReferenceId())
+                .type(transaction.getType().name())
+                .direction(transaction.getDirection().name())
+                .amount(transaction.getAmount())
+                .date(transaction.getDate())
+                .accountNumber(transaction.getAccount().getId())
+                .relatedAccountNumber(
+                        transaction.getRelatedAccount() != null
+                                ? transaction.getRelatedAccount().getId()
+                                : null
+                )
+                .email(email)
+                .status(transaction.getStatus().name())
+                .build();
     }
 }

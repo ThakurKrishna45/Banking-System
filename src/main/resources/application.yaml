@@ -16,7 +16,7 @@ spring:
     redis:
       cache-null-values: false
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: kafka:9092
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -27,5 +27,4 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        hibernate.jdbc.time_zone: Asia/Kolkata
     open-in-view: false

@@ -1,12 +1,10 @@
 # 🏦 Concurrency-Safe Banking System Backend
 
-A production-grade RESTful banking backend built with **Spring Boot** that supports secure account management, concurrent fund transfers, loan processing, and transaction tracking.
-
-Engineered with a strong focus on financial correctness, ACID compliance, and concurrency safety. Fully containerized using **Docker** and validated with **JUnit 5 & Mockito**.
-
+* A production-grade Microservices Backend built with **Spring Boot**, engineered for high-integrity financial operations. 
+* The system manages secure account lifecycles, high-concurrency transfers, and loan processing with a strict focus on ACID compliance and financial correctness.
 ---
 
-## 🚀 Core Features
+## Core Features
 
 ### 👤 Customer Management
 
@@ -32,10 +30,6 @@ Engineered with a strong focus on financial correctness, ACID compliance, and co
 * Retrieve recent transactions (mini statement)
 * Debit/Credit tracking with timestamps
 
-### 🏦 Loan Management
-
-* Apply for loans linked to accounts
-* Track loan status
 
 ---
 
@@ -56,7 +50,7 @@ This system mirrors real-world banking safeguards:
 * Layered architecture (Controller → Service → Repository → Entity)
 * DTO-based API design (no direct entity exposure)
 * Global exception handling with custom domain exceptions
-* ModelMapper for object mapping
+* Decoupled Microservices using **Kafka** (Producer (Banking System) → Kafka Broker → Consumer (Notification Service))
 * Clean RESTful endpoints
 
 ---
@@ -74,16 +68,12 @@ This system mirrors real-world banking safeguards:
 
 The application is fully containerized using Docker and orchestrated with Docker Compose for consistent environments and one-command startup.
 
-## ▶️ Run Using Docker Compose (Recommended)
-
-This will build the image from the Dockerfile and start all services defined in `compose.yaml`.
-
+## How to Run (With Docker)
+* Pull the current repository and also pull notification-service repository [https://github.com/ThakurKrishna45/Notification-service]
+* Run the command given below (How to Start Container) in banking-system repo first and then run the same command in Notification-service repo.
+## How to Start Container 
 ```bash
 docker compose up --build
-```
-## ▶️ Run in Detached Mode
-```bash
-docker compose up -d --build
 ```
 ## ▶️ Stop and Remove Containers
 ```bash
@@ -126,7 +116,8 @@ mvn test
 * **Mapping:** ModelMapper
 * **Containerization:** Docker
 * **Testing:** JUnit 5, Mockito
-
+* **Cache:** Redis
+* **Messaging:** Apache Kafka
 ---
 
 ## 📂 Project Structure
@@ -141,7 +132,9 @@ banking-system
 │   ├── controller      # REST API layer
 │   ├── entity          # JPA entities
 │   │   └── dto         # Request & response models
+│   ├── event           # DTO for events
 │   ├── exception       # Custom exceptions & handlers
+│   ├── kafka           # Producer classes
 │   ├── repository      # Data access layer
 │   ├── service         # Service interfaces
 │   │   └── impl        # Business logic implementations
@@ -162,24 +155,6 @@ banking-system
 4. Credit receiver account
 5. Record transaction entries
 6. Commit transaction atomically
-
----
-
-## ▶️ Getting Started (Without Docker)
-
-### Prerequisites
-
-* Java 17+
-* Maven
-* PostgreSQL (optional)
-
-### Run Locally
-
-```bash
-git clone https://github.com/your-username/banking-system.git
-cd banking-system
-mvn spring-boot:run
-```
 
 ---
 
@@ -220,6 +195,8 @@ PUT    /accounts/deactivate/{id}
 
 ```
 POST   /transactions/transfer
+POST   /transactions/withdraw
+POST   /transactions/deposit
 ```
 
 ### Mini Statement
@@ -234,17 +211,6 @@ GET    /transactions/statement/{accountId}
 POST   /loans/apply
 GET    /loans/account/{accountId}
 ```
-
----
-
-## 📈 Possible Future Enhancements
-
-* JWT authentication & role-based authorization
-* Idempotent transfer APIs
-* Audit logging
-* Rate limiting
-* Redis caching
-* Event-driven notifications
 
 ---
 

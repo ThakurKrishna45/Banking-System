@@ -40,6 +40,7 @@ public class TransactionServiceImpl implements TransactionService {
     final private ModelMapper modelMapper;
     final private TransactionLoggerService transactionLoggerService;
     final private ProducerService producerService;
+    final private IdempotencyService idempotencyService;
     private Transaction buildTxn(String refId, Account account, Account relatedAccount,
                                  BigDecimal amt, TransactionType type,
                                  TransactionDirection dir, Status status) {
@@ -55,10 +56,20 @@ public class TransactionServiceImpl implements TransactionService {
                     .build();
         }
 
+
+//        deposit
         @Override
         @Transactional
         @CacheEvict(value = "Account", key = "#dto.getAccountNumber()")
-        public ResponseTransactionDto deposit(TransactionDto dto) {
+        public ResponseTransactionDto deposit(TransactionDto dto,
+                                              String idempotencyKey) {
+            if(!idempotencyService.acquire(
+                    idempotencyKey)){
+
+                throw new InvalidOperationException(
+                        "Duplicate request"
+                );
+            }
             String refId = UUID.randomUUID().toString();
             Account account = null;
             try {
@@ -83,6 +94,10 @@ public class TransactionServiceImpl implements TransactionService {
                             }
                         }
                 );
+                idempotencyService.success(
+                        idempotencyKey,
+                        refId
+                );
                 return customModelMapper.mapTransactionResponse(success, new ResponseTransactionDto());
 
             } catch (Exception e) {
@@ -95,14 +110,28 @@ public class TransactionServiceImpl implements TransactionService {
                 TransactionNotificationEvent event = customModelMapper.mapToTransactionEvent(fail,
                         account.getCustomer().getEmail());
                 producerService.send(event);
+                idempotencyService.failed(
+                        idempotencyKey
+                );
+
                 throw e;
             }
         }
 
+
+//        withdraw
         @Override
         @Transactional
         @CacheEvict(value = "Account", key = "#dto.getAccountNumber()")
-        public ResponseTransactionDto withdraw(TransactionDto dto) {
+        public ResponseTransactionDto withdraw(TransactionDto dto,
+                                               String idempotencyKey) {
+            if(!idempotencyService.acquire(
+                    idempotencyKey)){
+
+                throw new InvalidOperationException(
+                        "Duplicate request"
+                );
+            }
             String refId = UUID.randomUUID().toString();
             Account account = null;
             try {
@@ -131,6 +160,10 @@ public class TransactionServiceImpl implements TransactionService {
                             }
                         }
                 );
+                idempotencyService.success(
+                        idempotencyKey,
+                        refId
+                );
                 return customModelMapper.mapTransactionResponse(success, new ResponseTransactionDto());
 
             } catch (Exception e) {
@@ -143,6 +176,10 @@ public class TransactionServiceImpl implements TransactionService {
                 TransactionNotificationEvent event = customModelMapper.mapToTransactionEvent(fail,
                         account.getCustomer().getEmail());
                 producerService.send(event);
+                idempotencyService.failed(
+                        idempotencyKey
+                );
+
                 throw e;
             }
         }
@@ -153,7 +190,15 @@ public class TransactionServiceImpl implements TransactionService {
                 @CacheEvict(value = "Account", key = "#dto.getAccountNumber()"),
                 @CacheEvict(value = "Account", key = "#dto.getRelatedAccountNumber()")
         })
-        public ResponseTransactionDto transfer(TransactionDto dto) {
+        public ResponseTransactionDto transfer(TransactionDto dto,
+                                               String idempotencyKey) {
+            if(!idempotencyService.acquire(
+                    idempotencyKey)){
+
+                throw new InvalidOperationException(
+                        "Duplicate request"
+                );
+            }
             String refId = UUID.randomUUID().toString();
             Account sender = null;
             try {
@@ -207,6 +252,10 @@ public class TransactionServiceImpl implements TransactionService {
                             }
                         }
                 );
+                idempotencyService.success(
+                        idempotencyKey,
+                        refId
+                );
                 return customModelMapper.mapTransactionResponse(debit, new ResponseTransactionDto());
 
             } catch (Exception e) {
@@ -217,6 +266,10 @@ public class TransactionServiceImpl implements TransactionService {
 //                trigger fail notification event
                 TransactionNotificationEvent event = customModelMapper.mapToTransactionEvent(fail,
                         sender.getCustomer().getEmail());
+                idempotencyService.failed(
+                        idempotencyKey
+                );
+
                 throw e;
             }
         }

@@ -7,11 +7,14 @@ import com.krishna.banking.entity.dto.TransactionDto;
 import java.util.List;
 
 public interface TransactionService {
-    ResponseTransactionDto deposit(TransactionDto transactionDto);
+    ResponseTransactionDto deposit(TransactionDto transactionDto,
+                                   String idempotencyKey);
 
-    ResponseTransactionDto withdraw(TransactionDto transactionDto);
+    ResponseTransactionDto withdraw(TransactionDto transactionDto,
+                                    String idempotencyKey);
 
-    ResponseTransactionDto transfer(TransactionDto transactionDto);
+    ResponseTransactionDto transfer(TransactionDto transactionDto,
+                                    String idempotencyKey);
 
     List<MiniStatementDto> miniStatement(Integer id);
 }

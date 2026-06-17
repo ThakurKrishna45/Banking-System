@@ -19,20 +19,23 @@ import java.util.List;
 public class TransactionController {
     final private TransactionService transactionService;
     @PostMapping("/deposit")
-    public ResponseEntity<ResponseDto> deposit(@RequestBody TransactionDto transactionDto){
-        ResponseTransactionDto responseTransactionDto= transactionService.deposit(transactionDto);
+    public ResponseEntity<ResponseDto> deposit(@RequestHeader("Idempotency-Key")
+                                                   String idempotencyKey, @RequestBody TransactionDto transactionDto){
+        ResponseTransactionDto responseTransactionDto= transactionService.deposit(transactionDto, idempotencyKey);
         return ResponseEntity.status(HttpStatus.OK)
                 .body(new ResponseDto(AccountConstant.STATUS_200,"Money Deposited",responseTransactionDto));
     }
     @PostMapping("/withdraw")
-    public ResponseEntity<ResponseDto> withdraw(@RequestBody TransactionDto transactionDto){
-        ResponseTransactionDto responseTransactionDto= transactionService.withdraw(transactionDto);
+    public ResponseEntity<ResponseDto> withdraw(@RequestHeader("Idempotency-Key")
+                                                    String idempotencyKey, @RequestBody TransactionDto transactionDto){
+        ResponseTransactionDto responseTransactionDto= transactionService.withdraw(transactionDto, idempotencyKey);
         return ResponseEntity.status(HttpStatus.OK)
                 .body(new ResponseDto(AccountConstant.STATUS_200,"Money Withdrawn",responseTransactionDto));
     }
     @PostMapping("/transfer")
-    public ResponseEntity<ResponseDto> transfer(@RequestBody TransactionDto transactionDto){
-        ResponseTransactionDto responseTransactionDto= transactionService.transfer(transactionDto);
+    public ResponseEntity<ResponseDto> transfer(@RequestHeader("Idempotency-Key")
+                                                    String idempotencyKey, @RequestBody TransactionDto transactionDto){
+        ResponseTransactionDto responseTransactionDto= transactionService.transfer(transactionDto, idempotencyKey);
         return ResponseEntity.status(HttpStatus.OK)
                 .body(new ResponseDto(AccountConstant.STATUS_200,"Money Transfer Successful",responseTransactionDto));
     }

@@ -16,18 +16,23 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(TransactionController.class)
-public class TransactionControllerTest {
+class TransactionControllerTest {
+
     @Autowired
     private MockMvc mockMvc;
+
     @MockitoBean
     private TransactionService transactionService;
+
     @Autowired
     private ObjectMapper objectMapper;
+
     private TransactionDto transactionDto;
     private ResponseTransactionDto responseDto;
 
@@ -41,31 +46,55 @@ public class TransactionControllerTest {
         responseDto = new ResponseTransactionDto();
         responseDto.setAmount(BigDecimal.valueOf(10000));
     }
-    @Test
-    void testDeposit() throws Exception{
 
-        when(transactionService.deposit(any(TransactionDto.class))).thenReturn(responseDto);
-        mockMvc.perform(post("/transaction/deposit")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(transactionDto)))
+    @Test
+    void testDeposit() throws Exception {
+
+        when(transactionService.deposit(
+                any(TransactionDto.class),
+                anyString()
+        )).thenReturn(responseDto);
+
+        mockMvc.perform(
+                        post("/transaction/deposit")
+                                .header("Idempotency-Key", "deposit-key-123")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(transactionDto))
+                )
                 .andExpect(status().isOk());
     }
-    @Test
-    void testWithdraw() throws Exception{
 
-        when(transactionService.withdraw(any(TransactionDto.class))).thenReturn(responseDto);
-        mockMvc.perform(post("/transaction/withdraw")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(transactionDto)))
+    @Test
+    void testWithdraw() throws Exception {
+
+        when(transactionService.withdraw(
+                any(TransactionDto.class),
+                anyString()
+        )).thenReturn(responseDto);
+
+        mockMvc.perform(
+                        post("/transaction/withdraw")
+                                .header("Idempotency-Key", "withdraw-key-123")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(transactionDto))
+                )
                 .andExpect(status().isOk());
     }
-    @Test
-    void testTransfer() throws Exception{
 
-        when(transactionService.transfer(any(TransactionDto.class))).thenReturn(responseDto);
-        mockMvc.perform(post("/transaction/transfer")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(transactionDto)))
+    @Test
+    void testTransfer() throws Exception {
+
+        when(transactionService.transfer(
+                any(TransactionDto.class),
+                anyString()
+        )).thenReturn(responseDto);
+
+        mockMvc.perform(
+                        post("/transaction/transfer")
+                                .header("Idempotency-Key", "transfer-key-123")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(transactionDto))
+                )
                 .andExpect(status().isOk());
     }
 }
